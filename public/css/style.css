@@ -5,10 +5,10 @@
 }
 
 body {
-    font-size: 36px;
+    font: 36px/1.5 sans-serif;
     min-height: 100vh;
     color: #fff;
-    background-color: #000;
+    background: #000;
     display: grid;
     place-content: center;
 }

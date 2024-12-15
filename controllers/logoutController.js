@@ -6,29 +6,40 @@ const fsPromises = require('fs').promises;
 const path = require('path');
 
 const handleLogout = async (req, res) => {
-    // On client, also delete the accessToken
-
     const cookies = req.cookies;
-    if (!cookies?.jwt) return res.sendStatus(204); //No content
-    const refreshToken = cookies.jwt;
-
-    // Is refreshToken in db?
-    const foundUser = usersDB.users.find(person => person.refreshToken === refreshToken);
-    if (!foundUser) {
-        res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true });
+    if (!cookies?.jwt) {
         return res.sendStatus(204);
     }
 
-    // Delete refreshToken in db
-    const otherUsers = usersDB.users.filter(person => person.refreshToken !== foundUser.refreshToken);
-    const currentUser = { ...foundUser, refreshToken: '' };
-    usersDB.setUsers([...otherUsers, currentUser]);
+    const cookieOptions = { 
+        httpOnly: true, 
+        sameSite: 'None', 
+        secure: true 
+    };
+
+    // Find user with matching refresh token
+    const foundUser = usersDB.users.find(person => person.refreshToken === cookies.jwt);
+    if (!foundUser) {
+        res.clearCookie('jwt', cookieOptions);
+        return res.sendStatus(204);
+    }
+
+    // Update user's refresh token to empty string
+    usersDB.setUsers(
+        usersDB.users.map(person => 
+            person.refreshToken === cookies.jwt 
+                ? { ...person, refreshToken: '' }
+                : person
+        )
+    );
+
+    // Save updated users to file
     await fsPromises.writeFile(
         path.join(__dirname, '..', 'model', 'users.json'),
         JSON.stringify(usersDB.users)
     );
 
-    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true });
+    res.clearCookie('jwt', cookieOptions);
     res.sendStatus(204);
 }
 
